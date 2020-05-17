@@ -337,12 +337,126 @@ class RowIterable {
   int i;
 };
 
+template <int N>
+class BoxIterator {
+ public:
+  static BoxIterator Begin(const State& state, int i, int j) {
+    return BoxIterator(state, i, j);
+  }
+
+  static BoxIterator End(const State& state, int i, int j) {
+    BoxIterator r(state, i, j);
+    r.is_end = true;
+    return r;
+  }
+
+  BoxIterator(const State& state, int i, int j)
+      : state(state), i(i), j(j), is_end(false) {
+    if (N > state.size) {
+      is_end = true;
+      return;
+    }
+    for (int k = 0; k < N; k++) {
+      indexes.emplace_back(k);
+    }
+  }
+
+  BoxIterator& operator++() {
+    if (indexes.back() + 1 < state.size) {
+      indexes.back()++;
+      return *this;
+    }
+    for (int k = N - 2; k >= 0; k--) {
+      if (indexes[k] + 1 < indexes[k + 1]) {
+        indexes[k]++;
+        return *this;
+      }
+    }
+    is_end = true;
+    return *this;
+  }
+
+  BoxIterator operator++(int) {
+    BoxIterator tmp(state, i, j);
+    operator++();
+    return tmp;
+  }
+
+  bool operator!=(const BoxIterator& other) const {
+    if (other.is_end != is_end) return true;
+
+    if (other.is_end && is_end) return false;
+
+    for (int k = 0; k < N; k++) {
+      if (indexes[k] != other.indexes[k]) return true;
+    }
+    return false;
+  }
+
+  std::vector<ValueReference> operator*() const {
+    if (is_end) return {};
+    std::vector<ValueReference> r;
+    for (int k = 0; k < N; k++) {
+      int position = indexes[k];
+      int i_coord = i + position / 3;
+      int j_coord = j + position % 3;
+      r.emplace_back(state, i_coord, j_coord);
+    }
+    return r;
+  }
+
+ private:
+  const State& state;
+  int i;
+  int j;
+  std::vector<int> indexes;
+  bool is_end;
+};
+
+template <int N>
+class BoxIterable {
+ public:
+  BoxIterable(const State& state, int i, int j) : state(state), i(i), j(j) {}
+  BoxIterator<N> begin() { return BoxIterator<N>::Begin(state, i, j); }
+  BoxIterator<N> end() { return BoxIterator<N>::End(state, i, j); }
+
+ private:
+  const State& state;
+  int i;
+  int j;
+};
+
 template <int N, bool Direction>
 std::vector<Pair> GetPairsForRowN(const State& state, int i) {
-  // std::cout << "GetPairsFor " << N << " " << i << std::endl;
   std::vector<Pair> result;
   for (const auto& pair_list : RowIterable<N, Direction>(state, i)) {
-    // std::cout << "pair_list " << pair_list.size() << std::endl;
+    std::set<int> possible_marks;
+    bool impossible = false;
+    for (const auto& p : pair_list) {
+      if (p.pm.empty()) {
+        impossible = true;
+        break;
+      }
+      possible_marks.insert(p.pm.begin(), p.pm.end());
+    }
+    if (impossible) continue;
+
+    if (possible_marks.size() == N) {
+      Pair r;
+      r.numbers = possible_marks;
+      for (const auto& p : pair_list) {
+        r.coords.insert({p.i, p.j});
+      }
+      result.emplace_back(r);
+    }
+  }
+  return result;
+}
+
+template <int N>
+std::vector<Pair> GetPairsForBoxN(const State& state, int i, int j) {
+  std::vector<Pair> result;
+  for (const auto& pair_list : BoxIterable<N>(state, i, j)) {
     std::set<int> possible_marks;
     bool impossible = false;
     for (const auto& p : pair_list) {
@@ -374,7 +488,6 @@ std::vector<Pair> GetPairsForRow(const State& state, int i) {
     }
   }
   std::vector<Pair> result;
-  // pairs of two
   if (count < 3) return result;
   const auto& result2 = GetPairsForRowN<2, true>(state, i);
   result.insert(result.end(), result2.begin(), result2.end());
@@ -415,74 +528,21 @@ std::vector<Pair> GetPairsForBox(const State& state, const Box& bb) {
       }
     }
   }
-
   std::vector<Pair> result;
-  // pairs of two
   if (count < 3) return result;
-  for (int i = bb.start_i; i < bb.end_i; i++) {
-    for (int j = bb.start_j; j < bb.end_j; j++) {
-      if (state.p[i][j].empty()) continue;
-      int i1 = i;
-      int j1 = j;
-      for (int k = 0; k < state.size - 1; k++) {
-        const auto& next = GetNextInBox(i1, j1);
-        i1 = next.first;
-        j1 = next.second;
-        if (state.p[i1][j1].empty()) continue;
-        std::set<int> possible_marks = state.p[i][j];
-        possible_marks.insert(state.p[i1][j1].begin(), state.p[i1][j1].end());
-        if (possible_marks.size() == 2) {
-          Pair r;
-          r.numbers = possible_marks;
-          r.coords.insert({i, j});
-          r.coords.insert({i1, j1});
-          result.emplace_back(r);
-        }
-      }
-    }
-  }
+  const auto& result2 = GetPairsForBoxN<2>(state, bb.start_i, bb.start_j);
+  result.insert(result.end(), result2.begin(), result2.end());
 
-  // pairs of tree
   if (count < 4) return result;
-  for (int i = bb.start_i; i < bb.end_i; i++) {
-    for (int j = bb.start_j; j < bb.end_j; j++) {
-      if (state.p[i][j].empty()) {
-        continue;
-      }
-      int i1 = i;
-      int j1 = j;
-      for (int k = 0; k < state.size - 1; k++) {
-        const auto& next = GetNextInBox(i1, j1);
-        i1 = next.first;
-        j1 = next.second;
-        if (state.p[i1][j1].empty()) continue;
+  const auto& result3 = GetPairsForBoxN<3>(state, bb.start_i, bb.start_j);
+  result.insert(result.end(), result3.begin(), result3.end());
 
-        int i2 = i1;
-        int j2 = j1;
-        for (int l = k + 1; l < state.size - 1; l++) {
-          const auto& next2 = GetNextInBox(i2, j2);
-          i2 = next2.first;
-          j2 = next2.second;
+  if (count < 5) return result;
+  const auto& result4 = GetPairsForBoxN<4>(state, bb.start_i, bb.start_j);
+  result.insert(result.end(), result4.begin(), result4.end());
 
-          if (state.p[i2][j2].empty()) continue;
-
-          std::set<int> possible_marks = state.p[i][j];
-          possible_marks.insert(state.p[i1][j1].begin(), state.p[i1][j1].end());
-          possible_marks.insert(state.p[i2][j2].begin(), state.p[i2][j2].end());
-
-          if (possible_marks.size() == 3) {
-            Pair r;
-            r.numbers = possible_marks;
-            r.coords.insert({i, j});
-            r.coords.insert({i1, j1});
-            r.coords.insert({i2, j2});
-            result.emplace_back(r);
-          }
-        }
-      }
-    }
-  }
   return result;
+
 }
 
 std::vector<Pair> GetPairsForColumn(const State& state, int j) {
@@ -495,7 +555,6 @@ std::vector<Pair> GetPairsForColumn(const State& state, int j) {
   }
 
   std::vector<Pair> result;
-  // pairs of two
   if (count < 3) return result;
   const auto& result2 = GetPairsForRowN<2, false>(state, j);
   result.insert(result.end(), result2.begin(), result2.end());
