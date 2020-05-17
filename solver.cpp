@@ -240,10 +240,10 @@ std::vector<Pair> GetPairsForRow(const State& state, int i) {
       count++;
     }
   }
-  if (count < 3) return {};
 
   std::vector<Pair> result;
   // pairs of two
+  if (count < 3) return result;
   for (int j = 0; j < state.size - 1; j++) {
     if (state.p[i][j].empty()) continue;
     for (int k = j + 1; k < state.size; k++) {
@@ -259,8 +259,9 @@ std::vector<Pair> GetPairsForRow(const State& state, int i) {
       }
     }
   }
-  if (count < 4) return result;
+
   // pairs of tree
+  if (count < 4) return result;
   for (int j = 0; j < state.size - 2; j++) {
     if (state.p[i][j].empty()) continue;
     for (int k = j + 1; k < state.size - 1; k++) {
@@ -312,10 +313,10 @@ std::vector<Pair> GetPairsForBox(const State& state, const Box& bb) {
       }
     }
   }
-  if (count < 3) return {};
 
   std::vector<Pair> result;
   // pairs of two
+  if (count < 3) return result;
   for (int i = bb.start_i; i < bb.end_i; i++) {
     for (int j = bb.start_j; j < bb.end_j; j++) {
       if (state.p[i][j].empty()) continue;
@@ -338,8 +339,9 @@ std::vector<Pair> GetPairsForBox(const State& state, const Box& bb) {
       }
     }
   }
-  if (count < 4) return result;
+
   // pairs of tree
+  if (count < 4) return result;
   for (int i = bb.start_i; i < bb.end_i; i++) {
     for (int j = bb.start_j; j < bb.end_j; j++) {
       if (state.p[i][j].empty()) {
@@ -389,10 +391,10 @@ std::vector<Pair> GetPairsForColumn(const State& state, int j) {
       count++;
     }
   }
-  if (count < 3) return {};
 
   std::vector<Pair> result;
   // pairs of two
+  if (count < 3) return result;
   for (int i = 0; i < state.size - 1; i++) {
     if (state.p[i][j].empty()) continue;
     for (int k = i + 1; k < state.size; k++) {
@@ -408,8 +410,9 @@ std::vector<Pair> GetPairsForColumn(const State& state, int j) {
       }
     }
   }
-  if (count < 4) return result;
+
   // pairs of tree
+  if (count < 4) return result;
   for (int i = 0; i < state.size - 2; i++) {
     if (state.p[i][j].empty()) {
       continue;
@@ -483,7 +486,6 @@ void ReducePairsInRow(State& state, int i) {
   for (const auto& p : pairs) {
     ApplyPairRestrictionsForRow(state, i, p);
   }
-  return;
 }
 
 void ReducePairsInColumn(State& state, int j) {
@@ -492,7 +494,6 @@ void ReducePairsInColumn(State& state, int j) {
   for (const auto& p : pairs) {
     ApplyPairRestrictionsForColumn(state, j, p);
   }
-  return;
 }
 
 void ReducePairsInBox(State& state, const Box& bb) {
@@ -501,7 +502,6 @@ void ReducePairsInBox(State& state, const Box& bb) {
   for (const auto& p : pairs) {
     ApplyPairRestrictionsForBox(state, bb, p);
   }
-  return;
 }
 
 void ReducePairs(State& state) {
@@ -521,7 +521,6 @@ void ReducePairs(State& state) {
       ReducePairsInBox(state, bb);
     }
   }
-  return;
 }
 
 void FillValue(State& state, int i, int j, int val) { state.f[i][j] = val; }
