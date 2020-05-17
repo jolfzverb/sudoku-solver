@@ -19,6 +19,9 @@ Command GetNextCommand() {
   std::string command;
   std::getline(std::cin, command);
 
+  if (std::cin.eof()) {
+    return Command::kExit;
+  }
   if (command == "r") {
     return Command::kReadState;
   }
@@ -75,27 +78,51 @@ State ReadState() {
   return r;
 }
 
+int CalculateBoxSize(const State& state) {
+  int box_size = 3;
+  for (const auto& p : state.p) {
+    for (const auto& pm : p) {
+      int val = pm.size();
+      box_size = box_size > val ? box_size : val;
+    }
+  }
+  return box_size;
+}
+
 void FullPrint(const State& state) {
+  int box_size = CalculateBoxSize(state);
+
   for (int i = 0; i < state.size; i++) {
     const auto& a = state.f[i];
     const auto& p = state.p[i];
+    for (int k = 0; k < state.size * (box_size + 1); k++) {
+      std::cout << "-";
+    }
+    std::cout << "-" << std::endl;
     for (int j = 0; j < state.size; j++) {
       int val = a[j];
       const auto& pm = p[j];
       if (val) {
-        std::cout << "|    " << val << "    ";
+        std::cout << "| " << val;
+        for (int k = 2; k < box_size; k++) {
+          std::cout << " ";
+        }
       } else {
         std::cout << "|";
         for (int k : pm) {
           std::cout << k;
         }
-        for (int k = pm.size(); k < state.size; k++) {
+        for (int k = pm.size(); k < box_size; k++) {
           std::cout << " ";
         }
       }
     }
     std::cout << "|" << std::endl;
   }
+  for (int k = 0; k < state.size * (box_size + 1); k++) {
+    std::cout << "-";
+  }
+  std::cout << "-" << std::endl;
 }
 
 void PrintState(const State& state) {
@@ -302,8 +329,6 @@ std::vector<Pair> GetPairsForBox(const State& state, const Box& bb) {
         std::set<int> possible_marks = state.p[i][j];
         possible_marks.insert(state.p[i1][j1].begin(), state.p[i1][j1].end());
         if (possible_marks.size() == 2) {
-          std::cout << "found pair " << i << " " << j << " " << i1 << " " << j1
-                    << " " << std::endl;
           Pair r;
           r.numbers = possible_marks;
           r.coords.insert({i, j});
@@ -342,8 +367,6 @@ std::vector<Pair> GetPairsForBox(const State& state, const Box& bb) {
           possible_marks.insert(state.p[i2][j2].begin(), state.p[i2][j2].end());
 
           if (possible_marks.size() == 3) {
-            std::cout << "found pair " << i << " " << j << " " << i1 << " "
-                      << j1 << " " << i2 << " " << j2 << " " << std::endl;
             Pair r;
             r.numbers = possible_marks;
             r.coords.insert({i, j});
@@ -475,7 +498,6 @@ void ReducePairsInColumn(State& state, int j) {
 void ReducePairsInBox(State& state, const Box& bb) {
   const auto& pairs = GetPairsForBox(state, bb);
   if (pairs.empty()) return;
-  std::cout << "found pairs in box " << pairs.size() << std::endl;
   for (const auto& p : pairs) {
     ApplyPairRestrictionsForBox(state, bb, p);
   }
@@ -487,12 +509,10 @@ void ReducePairs(State& state) {
     ReducePairsInRow(state, i);
   }
   for (int j = 0; j < state.size; j++) {
-    std::cout << "trying to reduce column " << j << std::endl;
     ReducePairsInColumn(state, j);
   }
   for (int i = 0; i < state.size; i += 3) {
     for (int j = 0; j < state.size; j += 3) {
-      std::cout << "trying to reduce box " << i << " " << j << std::endl;
       Box bb;
       bb.start_i = i;
       bb.end_i = i + 3;
@@ -509,8 +529,6 @@ void FillValue(State& state, int i, int j, int val) { state.f[i][j] = val; }
 int TryFillSingleValue(State& state, int i, int j) {
   const auto& pm = state.p[i][j];
   if (pm.size() == 1) {
-    std::cout << "inserted from single " << i + 1 << " " << j + 1 << std::endl;
-
     int val = *pm.begin();
     FillValue(state, i, j, *pm.begin());
     return val;
@@ -551,7 +569,6 @@ int TryFillForRow(State& state, int i, int j) {
   for (int val : pm) {
     int count = CountPencilMarksInRow(state, i, val);
     if (count == 1) {
-      std::cout << "inserted from row " << i + 1 << " " << j + 1 << std::endl;
       FillValue(state, i, j, val);
       return val;
     }
@@ -564,8 +581,6 @@ int TryFillForColumn(State& state, int i, int j) {
   for (int val : pm) {
     int count = CountPencilMarksInColumn(state, j, val);
     if (count == 1) {
-      std::cout << "inserted from column " << i + 1 << " " << j + 1
-                << std::endl;
       FillValue(state, i, j, val);
       return val;
     }
@@ -578,7 +593,6 @@ int TryFillForBox(State& state, int i, int j) {
   for (int val : pm) {
     int count = CountPencilMarksInBox(state, i, j, val);
     if (count == 1) {
-      std::cout << "inserted from box " << i + 1 << " " << j + 1 << std::endl;
       FillValue(state, i, j, val);
       return val;
     }
@@ -630,8 +644,10 @@ void CheckIfSolved(State& state) {
     if (!solved) break;
   }
   if (solved) {
-    std::cout << "Solved!" << std::endl;
+    std::cout << std::endl;
     PrintState(state);
+    std::cout << "Solved! current iteration is " << state.current_iter
+              << std::endl;
   }
 }
 
@@ -654,7 +670,7 @@ int main() {
         FullPrint(state);
         break;
       case Command::kExit:
-        std::cout << "Exiting";
+        std::cout << "Exiting" << std::endl;
         return 0;
       case Command::kFill:
         FillPencilMarks(state);
@@ -674,6 +690,8 @@ int main() {
           ReducePairs(state);
         }
         if (state.changed_on_iter != state.current_iter) {
+          std::cout << std::endl;
+          FullPrint(state);
           std::cout << "Cannot reduce further, try using brute force"
                     << std::endl;
         }
