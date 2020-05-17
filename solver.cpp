@@ -75,6 +75,8 @@ State ReadState() {
     r.f.emplace_back(rf);
     r.p.emplace_back(rp);
   }
+  std::string tmp;
+  std::getline(std::cin, tmp);
   return r;
 }
 
@@ -233,6 +235,137 @@ struct Pair {
   std::set<std::pair<int, int>> coords;
 };
 
+class ValueReference {
+ public:
+  ValueReference(const State& state, int i, int j)
+      : i(i), j(j), val(state.f[i][j]), pm(state.p[i][j]) {}
+
+  int i;
+  int j;
+  const int& val;
+  const std::set<int>& pm;
+};
+
+template <int N, bool Direction>
+class RowIterator {
+ public:
+  static RowIterator Begin(const State& state, int i) {
+    return RowIterator(state, i);
+  }
+
+  static RowIterator End(const State& state, int i) {
+    RowIterator r(state, i);
+    r.is_end = true;
+    return r;
+  }
+
+  RowIterator(const State& state, int i) : state(state), i(i), is_end(false) {
+    if (N > state.size) {
+      is_end = true;
+      return;
+    }
+    for (int k = 0; k < N; k++) {
+      indexes.emplace_back(k);
+    }
+  }
+
+  RowIterator& operator++() {
+    if (indexes.back() + 1 < state.size) {
+      indexes.back()++;
+      return *this;
+    }
+    for (int k = N - 2; k >= 0; k--) {
+      if (indexes[k] + 1 < indexes[k + 1]) {
+        indexes[k]++;
+        return *this;
+      }
+    }
+    is_end = true;
+    return *this;
+  }
+
+  RowIterator operator++(int) {
+    RowIterator tmp(state, i);
+    operator++();
+    return tmp;
+  }
+
+  bool operator!=(const RowIterator& other) const {
+    if (other.is_end != is_end) return true;
+
+    if (other.is_end && is_end) return false;
+
+    for (int k = 0; k < N; k++) {
+      if (indexes[k] != other.indexes[k]) return true;
+    }
+    return false;
+  }
+
+  std::vector<ValueReference> operator*() const {
+    if (is_end) return {};
+    std::vector<ValueReference> r;
+    for (int k = 0; k < N; k++) {
+      if (Direction) {
+        r.emplace_back(state, i, indexes[k]);
+      } else {
+        r.emplace_back(state, indexes[k], i);
+      }
+    }
+    return r;
+  }
+
+ private:
+  const State& state;
+  int i;
+  std::vector<int> indexes;
+  bool is_end;
+};
+
+template <int N, bool Direction>
+class RowIterable {
+ public:
+  RowIterable(const State& state, int i) : state(state), i(i) {}
+  RowIterator<N, Direction> begin() {
+    return RowIterator<N, Direction>::Begin(state, i);
+  }
+  RowIterator<N, Direction> end() {
+    return RowIterator<N, Direction>::End(state, i);
+  }
+
+ private:
+  const State& state;
+  int i;
+};
+
+template <int N, bool Direction>
+std::vector<Pair> GetPairsForRowN(const State& state, int i) {
+  // std::cout << "GetPairsFor " << N << " " << i << std::endl;
+  std::vector<Pair> result;
+  for (const auto& pair_list : RowIterable<N, Direction>(state, i)) {
+    // std::cout << "pair_list " << pair_list.size() << std::endl;
+    std::set<int> possible_marks;
+    bool impossible = false;
+    for (const auto& p : pair_list) {
+      if (p.pm.empty()) {
+        impossible = true;
+        break;
+      }
+      possible_marks.insert(p.pm.begin(), p.pm.end());
+    }
+    if (impossible) continue;
+
+    if (possible_marks.size() == N) {
+      Pair r;
+      r.numbers = possible_marks;
+      for (const auto& p : pair_list) {
+        r.coords.insert({p.i, p.j});
+      }
+      result.emplace_back(r);
+    }
+  }
+  return result;
+}
+
 std::vector<Pair> GetPairsForRow(const State& state, int i) {
   int count = 0;
   for (const auto& pm : state.p[i]) {
@@ -240,51 +373,20 @@ std::vector<Pair> GetPairsForRow(const State& state, int i) {
       count++;
     }
   }
-
   std::vector<Pair> result;
   // pairs of two
   if (count < 3) return result;
-  for (int j = 0; j < state.size - 1; j++) {
-    if (state.p[i][j].empty()) continue;
-    for (int k = j + 1; k < state.size; k++) {
-      if (state.p[i][k].empty()) continue;
-      std::set<int> possible_marks = state.p[i][j];
-      possible_marks.insert(state.p[i][k].begin(), state.p[i][k].end());
-      if (possible_marks.size() == 2) {
-        Pair r;
-        r.numbers = possible_marks;
-        r.coords.insert({i, j});
-        r.coords.insert({i, k});
-        result.emplace_back(r);
-      }
-    }
-  }
+  const auto& result2 = GetPairsForRowN<2, true>(state, i);
+  result.insert(result.end(), result2.begin(), result2.end());
 
-  // pairs of tree
   if (count < 4) return result;
-  for (int j = 0; j < state.size - 2; j++) {
-    if (state.p[i][j].empty()) continue;
-    for (int k = j + 1; k < state.size - 1; k++) {
-      if (state.p[i][k].empty()) continue;
+  const auto& result3 = GetPairsForRowN<3, true>(state, i);
+  result.insert(result.end(), result3.begin(), result3.end());
 
-      for (int l = k + 1; l < state.size; l++) {
-        if (state.p[i][l].empty()) continue;
+  if (count < 5) return result;
+  const auto& result4 = GetPairsForRowN<4, true>(state, i);
+  result.insert(result.end(), result4.begin(), result4.end());
 
-        std::set<int> possible_marks = state.p[i][j];
-        possible_marks.insert(state.p[i][k].begin(), state.p[i][k].end());
-        possible_marks.insert(state.p[i][l].begin(), state.p[i][l].end());
-
-        if (possible_marks.size() == 3) {
-          Pair r;
-          r.numbers = possible_marks;
-          r.coords.insert({i, j});
-          r.coords.insert({i, k});
-          r.coords.insert({i, l});
-          result.emplace_back(r);
-        }
-      }
-    }
-  }
   return result;
 }
 
@@ -395,50 +497,17 @@ std::vector<Pair> GetPairsForColumn(const State& state, int j) {
   std::vector<Pair> result;
   // pairs of two
   if (count < 3) return result;
-  for (int i = 0; i < state.size - 1; i++) {
-    if (state.p[i][j].empty()) continue;
-    for (int k = i + 1; k < state.size; k++) {
-      if (state.p[k][j].empty()) continue;
-      std::set<int> possible_marks = state.p[i][j];
-      possible_marks.insert(state.p[k][j].begin(), state.p[k][j].end());
-      if (possible_marks.size() == 2) {
-        Pair r;
-        r.numbers = possible_marks;
-        r.coords.insert({i, j});
-        r.coords.insert({k, j});
-        result.emplace_back(r);
-      }
-    }
-  }
+  const auto& result2 = GetPairsForRowN<2, false>(state, j);
+  result.insert(result.end(), result2.begin(), result2.end());
 
-  // pairs of tree
   if (count < 4) return result;
-  for (int i = 0; i < state.size - 2; i++) {
-    if (state.p[i][j].empty()) {
-      continue;
-    }
-    for (int k = i + 1; k < state.size - 1; k++) {
-      if (state.p[k][j].empty()) {
-        continue;
-      }
-      for (int l = k + 1; l < state.size; l++) {
-        if (state.p[l][j].empty()) {
-          continue;
-        }
-        std::set<int> possible_marks = state.p[i][j];
-        possible_marks.insert(state.p[k][j].begin(), state.p[k][j].end());
-        possible_marks.insert(state.p[l][j].begin(), state.p[l][j].end());
-        if (possible_marks.size() == 3) {
-          Pair r;
-          r.numbers = possible_marks;
-          r.coords.insert({i, j});
-          r.coords.insert({k, j});
-          r.coords.insert({l, j});
-          result.emplace_back(r);
-        }
-      }
-    }
-  }
+  const auto& result3 = GetPairsForRowN<3, false>(state, j);
+  result.insert(result.end(), result3.begin(), result3.end());
+
+  if (count < 5) return result;
+  const auto& result4 = GetPairsForRowN<4, false>(state, j);
+  result.insert(result.end(), result4.begin(), result4.end());
+
   return result;
 }
 

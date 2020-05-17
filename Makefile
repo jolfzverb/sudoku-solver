@@ -3,7 +3,7 @@
 solver: solver.cpp
 	g++ -std=c++2a -Wall -pedantic solver.cpp -o solver
 
-test:
+test: solver
 	./solver < test
 
 clang-format:
