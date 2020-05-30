@@ -90,6 +90,18 @@ std::optional<std::pair<int, int>> Box::GetNext(
   return *it;
 }
 
+bool Box::Contains(int i, int j) const {
+  return Contains(std::make_pair(i, j));
+}
+
+bool Box::Contains(const std::pair<int, int>& p) const {
+  auto it = std::find(coords.begin(), coords.end(), p);
+  if (it == coords.end()) {
+    return false;
+  }
+  return true;
+}
+
 std::optional<std::pair<int, int>> Box::Begin() const {
   if (coords.empty()) return std::nullopt;
   return coords.front();

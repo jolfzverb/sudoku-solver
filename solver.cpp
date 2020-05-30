@@ -241,11 +241,50 @@ void ApplyPairRestrictionsForBox(state::State& state, const box::Box& b,
   }
 }
 
+std::optional<box::Box> GetRowForPair(const Pair& p) {
+  const auto& c = *p.coords.begin();
+  int i = c.first;
+  for (const auto& coord : p.coords) {
+    if (coord.first != i) {
+      return std::nullopt;
+    }
+  }
+  return box::Box::GetRow(i);
+}
+
+std::optional<box::Box> GetColumnForPair(const Pair& p) {
+  const auto& c = *p.coords.begin();
+  int i = c.second;
+  for (const auto& coord : p.coords) {
+    if (coord.second != i) {
+      return std::nullopt;
+    }
+  }
+  return box::Box::GetColumn(i);
+}
+
+std::optional<box::Box> GetBoxForPair(const Pair& p) {
+  const auto& c = *p.coords.begin();
+
+  box::Box b = box::Box::GetBox(c.first, c.second);
+
+  for (const auto& coord : p.coords) {
+    if (!b.Contains(coord)) {
+      return std::nullopt;
+    }
+  }
+  return b;
+}
+
 void ReducePairsInRow(state::State& state, const box::Box& b) {
   const auto& pairs = GetPairsForRow(state, b);
   if (pairs.empty()) return;
   for (const auto& p : pairs) {
     ApplyPairRestrictionsForRow(state, b, p);
+    const auto& box = GetBoxForPair(p);
+    if (box) {
+      ApplyPairRestrictionsForBox(state, *box, p);
+    }
   }
 }
 
@@ -254,6 +293,10 @@ void ReducePairsInColumn(state::State& state, const box::Box& b) {
   if (pairs.empty()) return;
   for (const auto& p : pairs) {
     ApplyPairRestrictionsForColumn(state, b, p);
+    const auto& box = GetBoxForPair(p);
+    if (box) {
+      ApplyPairRestrictionsForBox(state, *box, p);
+    }
   }
 }
 
@@ -262,6 +305,14 @@ void ReducePairsInBox(state::State& state, const box::Box& b) {
   if (pairs.empty()) return;
   for (const auto& p : pairs) {
     ApplyPairRestrictionsForBox(state, b, p);
+    const auto& col = GetColumnForPair(p);
+    if (col) {
+      ApplyPairRestrictionsForColumn(state, *col, p);
+    }
+    const auto& row = GetRowForPair(p);
+    if (row) {
+      ApplyPairRestrictionsForRow(state, *row, p);
+    }
   }
 }
 

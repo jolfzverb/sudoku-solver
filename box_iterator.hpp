@@ -30,6 +30,9 @@ class Box {
 
   std::optional<std::pair<int, int>> Begin() const;
 
+  bool Contains(int i, int j) const;
+  bool Contains(const std::pair<int, int>& p) const;
+
  private:
   std::vector<std::pair<int, int>> coords;
 };
