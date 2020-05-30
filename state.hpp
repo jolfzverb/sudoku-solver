@@ -15,11 +15,7 @@ struct State {
 State ReadState();
 void FullPrint(const State& state);
 void PrintState(const State& state);
-void FillPencilMarks(State& state);
-void ReducePencilMarks(State& state);
-void ReducePairs(State& state);
-void RemovePencilMark(State& state);
-void InsertValuesFromPencilMarks(State& state);
 void CheckIfSolved(State& state);
+void RemovePencilMark(State& state);
 
 }  // namespace state
