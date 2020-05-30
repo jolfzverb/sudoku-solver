@@ -20,6 +20,6 @@ void ReducePencilMarks(State& state);
 void ReducePairs(State& state);
 void RemovePencilMark(State& state);
 void InsertValuesFromPencilMarks(State& state);
-void CheckIfSolved(const State& state);
+void CheckIfSolved(State& state);
 
 }  // namespace state
