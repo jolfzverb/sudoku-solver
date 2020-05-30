@@ -18,6 +18,7 @@ class Box {
   static Box GetRow(int i);
   static Box GetColumn(int j);
   static Box GetBox(int i, int j);
+  static Box GetGrid();
 
   std::optional<std::pair<int, int>> GetNext(int i, int j) const;
 

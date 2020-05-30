@@ -5,6 +5,7 @@
 #include "box_iterator.hpp"
 
 namespace state {
+
 State ReadState() {
   State r;
   r.size = 9;
@@ -132,46 +133,46 @@ Box GetBox(int i, int j) {
   return result;
 }
 
-std::set<int> CollectVisible(const State& state, int i, int j) {
+std::set<int> CollectVisible(State& state, int i, int j) {
   std::set<int> result;
-  // column
-  for (int k = 0; k < state.size; k++) {
-    int val = state.f[k][j];
-    if (!val) continue;
-    result.insert(val);
+
+  box::Box b = box::Box::GetColumn(j);
+  for (const auto& pair_list : box::BoxIterable<1>(state, b)) {
+    const auto& p = pair_list.front();
+    if (p.val) result.insert(p.val);
   }
 
-  // row
-  for (int k = 0; k < state.size; k++) {
-    int val = state.f[i][k];
-    if (!val) continue;
-    result.insert(val);
+  b = box::Box::GetRow(i);
+  for (const auto& pair_list : box::BoxIterable<1>(state, b)) {
+    const auto& p = pair_list.front();
+    if (p.val) result.insert(p.val);
   }
 
-  // box
   Box bb = GetBox(i, j);
-  for (int k = bb.start_i; k < bb.end_i; k++) {
-    for (int l = bb.start_j; l < bb.end_j; l++) {
-      int val = state.f[k][l];
-      if (!val) continue;
-      result.insert(val);
-    }
+  b = box::Box::GetBox(bb.start_i, bb.start_j);
+  for (const auto& pair_list : box::BoxIterable<1>(state, b)) {
+    const auto& p = pair_list.front();
+    if (p.val) result.insert(p.val);
   }
+
   return result;
 }
 
 void ReducePencilMarks(State& state) {
-  for (int i = 0; i < state.size; i++) {
-    for (int j = 0; j < state.size; j++) {
-      int val = state.f[i][j];
-      if (val) continue;
-      const auto& visible_values = CollectVisible(state, i, j);
-      for (auto k : visible_values) {
-        int count = state.p[i][j].erase(k);
-        if (count) state.changed_on_iter = state.current_iter;
-      }
+  box::Box b = box::Box::GetGrid();
+  for (const auto& pair_list : box::BoxIterable<1>(state, b)) {
+    const auto& ref = pair_list.front();
+
+    if (ref.val) continue;
+
+    const auto& visible_values = CollectVisible(state, ref.i, ref.j);
+    for (auto k : visible_values) {
+      int count = state.p[ref.i][ref.j].erase(k);
+
+      if (count) state.changed_on_iter = state.current_iter;
     }
   }
+
   return;
 }
 

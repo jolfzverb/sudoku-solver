@@ -33,6 +33,16 @@ Box Box::GetBox(int i, int j) {
   return result;
 }
 
+Box Box::GetGrid() {
+  Box result;
+  for (int k = 0; k < GRID_SIZE; k++) {
+    for (int l = 0; l < GRID_SIZE; l++) {
+      result.coords.emplace_back(std::make_pair(k, l));
+    }
+  }
+  return result;
+}
+
 std::optional<std::pair<int, int>> Box::GetNext(int i, int j) const {
   return GetNext(std::make_pair(i, j));
 }
