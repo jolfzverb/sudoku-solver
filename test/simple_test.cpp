@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-TEST(Simple, True){
+TEST(Simple, True) {
   bool val = true;
   ASSERT_TRUE(val);
 }
