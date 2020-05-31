@@ -8,7 +8,7 @@ std::set<int> kFullSetPencilMarks = {1, 2, 3, 4, 5, 6, 7, 8, 9};
 
 void FillPencilMarks(state::State& state) {
   box::Box b = box::Box::GetGrid();
-  for (const auto& pair_list : box::BoxIterable<1>(state, b)) {
+  for (const auto& pair_list : box::GetIterable<1>(state, b)) {
     const auto& ref = pair_list.front();
     if (ref.val) continue;
     ref.pm = kFullSetPencilMarks;
@@ -25,23 +25,23 @@ struct Box {
   int end_j;
 };
 
-std::set<int> CollectVisible(state::State& state, int i, int j) {
+std::set<int> CollectVisible(const state::State& state, int i, int j) {
   std::set<int> result;
 
   box::Box b = box::Box::GetColumn(j);
-  for (const auto& pair_list : box::BoxIterable<1>(state, b)) {
+  for (const auto& pair_list : box::GetIterable<1>(state, b)) {
     const auto& p = pair_list.front();
     if (p.val) result.insert(p.val);
   }
 
   b = box::Box::GetRow(i);
-  for (const auto& pair_list : box::BoxIterable<1>(state, b)) {
+  for (const auto& pair_list : box::GetIterable<1>(state, b)) {
     const auto& p = pair_list.front();
     if (p.val) result.insert(p.val);
   }
 
   b = box::Box::GetBox(i, j);
-  for (const auto& pair_list : box::BoxIterable<1>(state, b)) {
+  for (const auto& pair_list : box::GetIterable<1>(state, b)) {
     const auto& p = pair_list.front();
     if (p.val) result.insert(p.val);
   }
@@ -51,7 +51,7 @@ std::set<int> CollectVisible(state::State& state, int i, int j) {
 
 void ReducePencilMarks(state::State& state) {
   box::Box b = box::Box::GetGrid();
-  for (const auto& pair_list : box::BoxIterable<1>(state, b)) {
+  for (const auto& pair_list : box::GetIterable<1>(state, b)) {
     const auto& ref = pair_list.front();
 
     if (ref.val) continue;
@@ -73,9 +73,10 @@ struct Pair {
 };
 
 template <int N, bool Direction>
-std::vector<Pair> GetPairsForRowN(state::State& state, const box::Box& b) {
+std::vector<Pair> GetPairsForRowN(const state::State& state,
+                                  const box::Box& b) {
   std::vector<Pair> result;
-  for (const auto& pair_list : box::BoxIterable<N>(state, b)) {
+  for (const auto& pair_list : box::GetIterable<N>(state, b)) {
     std::set<int> possible_marks;
     bool impossible = false;
     for (const auto& p : pair_list) {
@@ -100,10 +101,11 @@ std::vector<Pair> GetPairsForRowN(state::State& state, const box::Box& b) {
 }
 
 template <int N>
-std::vector<Pair> GetPairsForBoxN(state::State& state, const box::Box& b) {
+std::vector<Pair> GetPairsForBoxN(const state::State& state,
+                                  const box::Box& b) {
   std::vector<Pair> result;
 
-  for (const auto& pair_list : box::BoxIterable<N>(state, b)) {
+  for (const auto& pair_list : box::GetIterable<N>(state, b)) {
     std::set<int> possible_marks;
     bool impossible = false;
     for (const auto& p : pair_list) {
@@ -127,9 +129,9 @@ std::vector<Pair> GetPairsForBoxN(state::State& state, const box::Box& b) {
   return result;
 }
 
-std::vector<Pair> GetPairsForRow(state::State& state, const box::Box& b) {
+std::vector<Pair> GetPairsForRow(const state::State& state, const box::Box& b) {
   int count = 0;
-  for (const auto& pair_list : box::BoxIterable<1>(state, b)) {
+  for (const auto& pair_list : box::GetIterable<1>(state, b)) {
     const auto& ref = pair_list.front();
     if (!ref.pm.empty()) {
       count++;
@@ -152,9 +154,9 @@ std::vector<Pair> GetPairsForRow(state::State& state, const box::Box& b) {
   return result;
 }
 
-std::vector<Pair> GetPairsForBox(state::State& state, const box::Box& b) {
+std::vector<Pair> GetPairsForBox(const state::State& state, const box::Box& b) {
   int count = 0;
-  for (const auto& pair_list : box::BoxIterable<1>(state, b)) {
+  for (const auto& pair_list : box::GetIterable<1>(state, b)) {
     const auto& ref = pair_list.front();
     if (!ref.pm.empty()) {
       count++;
@@ -177,9 +179,10 @@ std::vector<Pair> GetPairsForBox(state::State& state, const box::Box& b) {
   return result;
 }
 
-std::vector<Pair> GetPairsForColumn(state::State& state, const box::Box& b) {
+std::vector<Pair> GetPairsForColumn(const state::State& state,
+                                    const box::Box& b) {
   int count = 0;
-  for (const auto& pair_list : box::BoxIterable<1>(state, b)) {
+  for (const auto& pair_list : box::GetIterable<1>(state, b)) {
     const auto& ref = pair_list.front();
     if (!ref.pm.empty()) {
       count++;
@@ -204,7 +207,7 @@ std::vector<Pair> GetPairsForColumn(state::State& state, const box::Box& b) {
 
 void ApplyPairRestrictionsForRow(state::State& state, const box::Box& b,
                                  const Pair& p) {
-  for (const auto& pair_list : box::BoxIterable<1>(state, b)) {
+  for (const auto& pair_list : box::GetIterable<1>(state, b)) {
     const auto& ref = pair_list.front();
     if (ref.pm.empty()) continue;
     if (p.coords.count({ref.i, ref.j})) continue;
@@ -217,7 +220,7 @@ void ApplyPairRestrictionsForRow(state::State& state, const box::Box& b,
 
 void ApplyPairRestrictionsForColumn(state::State& state, const box::Box& b,
                                     const Pair& p) {
-  for (const auto& pair_list : box::BoxIterable<1>(state, b)) {
+  for (const auto& pair_list : box::GetIterable<1>(state, b)) {
     const auto& ref = pair_list.front();
     if (ref.pm.empty()) continue;
     if (p.coords.count({ref.i, ref.j})) continue;
@@ -230,7 +233,7 @@ void ApplyPairRestrictionsForColumn(state::State& state, const box::Box& b,
 
 void ApplyPairRestrictionsForBox(state::State& state, const box::Box& b,
                                  const Pair& p) {
-  for (const auto& pair_list : box::BoxIterable<1>(state, b)) {
+  for (const auto& pair_list : box::GetIterable<1>(state, b)) {
     const auto& ref = pair_list.front();
     if (ref.pm.empty()) continue;
     if (p.coords.count({ref.i, ref.j})) continue;
@@ -339,32 +342,32 @@ int TryFillSingleValue(box::ValueReference& ref) {
   return 0;
 }
 
-int CountPencilMarksInRow(state::State& state, int i, int val) {
+int CountPencilMarksInRow(const state::State& state, int i, int val) {
   int c = 0;
 
   box::Box b = box::Box::GetRow(i);
-  for (const auto& pair_list : box::BoxIterable<1>(state, b)) {
+  for (const auto& pair_list : box::GetIterable<1>(state, b)) {
     const auto& p = pair_list.front();
     if (p.pm.count(val)) c++;
   }
   return c;
 }
 
-int CountPencilMarksInColumn(state::State& state, int j, int val) {
+int CountPencilMarksInColumn(const state::State& state, int j, int val) {
   int c = 0;
 
   box::Box b = box::Box::GetColumn(j);
-  for (const auto& pair_list : box::BoxIterable<1>(state, b)) {
+  for (const auto& pair_list : box::GetIterable<1>(state, b)) {
     const auto& p = pair_list.front();
     if (p.pm.count(val)) c++;
   }
   return c;
 }
 
-int CountPencilMarksInBox(state::State& state, int i, int j, int val) {
+int CountPencilMarksInBox(const state::State& state, int i, int j, int val) {
   int c = 0;
   box::Box b = box::Box::GetBox(i, j);
-  for (const auto& pair_list : box::BoxIterable<1>(state, b)) {
+  for (const auto& pair_list : box::GetIterable<1>(state, b)) {
     const auto& p = pair_list.front();
     if (p.pm.count(val)) c++;
   }
@@ -406,7 +409,7 @@ int TryFillForBox(state::State& state, box::ValueReference& ref) {
 
 void ClearPencilMarks(state::State& state) {
   box::Box b = box::Box::GetGrid();
-  for (const auto& pair_list : box::BoxIterable<1>(state, b)) {
+  for (const auto& pair_list : box::GetIterable<1>(state, b)) {
     const auto& p = pair_list.front();
     if (p.val) {
       p.pm.clear();
@@ -416,7 +419,7 @@ void ClearPencilMarks(state::State& state) {
 
 void InsertValuesFromPencilMarks(state::State& state) {
   box::Box b = box::Box::GetGrid();
-  for (auto pair_list : box::BoxIterable<1>(state, b)) {
+  for (auto pair_list : box::GetIterable<1>(state, b)) {
     auto& p = pair_list.front();
 
     if (p.val) continue;

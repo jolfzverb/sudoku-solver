@@ -15,7 +15,7 @@ struct State {
 State ReadState();
 void FullPrint(const State& state);
 void PrintState(const State& state);
-void CheckIfSolved(State& state);
+void CheckIfSolved(const State& state);
 void RemovePencilMark(State& state);
 
 }  // namespace state

@@ -100,9 +100,9 @@ void PrintState(const State& state) {
   std::cout << "-------------------------------------" << std::endl;
 }
 
-void CheckIfSolved(State& state) {
+void CheckIfSolved(const State& state) {
   box::Box b = box::Box::GetGrid();
-  for (auto pair_list : box::BoxIterable<1>(state, b)) {
+  for (auto pair_list : box::GetIterable<1>(state, b)) {
     auto& p = pair_list.front();
     if (!p.val) {
       return;
