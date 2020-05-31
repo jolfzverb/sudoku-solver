@@ -9,6 +9,8 @@ namespace state {
 State ReadState() {
   State r;
   r.size = 9;
+  r.current_iter = 0;
+  r.changed_on_iter = 0;
   for (int i = 0; i < r.size; i++) {
     std::vector<int> rf;
     std::vector<std::set<int>> rp;
