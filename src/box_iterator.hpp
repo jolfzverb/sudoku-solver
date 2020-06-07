@@ -294,4 +294,121 @@ ConstBoxIterable<N> GetIterable(const state::State& state, const Box& b) {
   return ConstBoxIterable<N>(state, b);
 }
 
+template <typename Iterator, int N>
+class PairIterator {
+ public:
+  static PairIterator Begin(const Iterator& begin, const Iterator& end) {
+    return PairIterator(begin, end);
+  }
+
+  static PairIterator End(const Iterator& begin, const Iterator& end) {
+    PairIterator r(begin, end);
+    r.is_end = true;
+    return r;
+  }
+
+  PairIterator(const Iterator& begin, const Iterator& end)
+      : begin(begin), end(end), is_end(false) {
+    auto it = begin;
+    for (int i = 0; i < N; i++) {
+      if (it != end) {
+        state.push_back(it);
+      } else {
+        is_end = true;
+        return;
+      }
+      it++;
+    }
+  }
+
+  PairIterator(const PairIterator& other)
+      : begin(other.begin),
+        end(other.end),
+        is_end(other.is_end),
+        state(other.state) {}
+
+  PairIterator& operator++() {
+    if (is_end) {
+      return *this;
+    }
+
+    Iterator it = state.back();
+    ++it;
+    if (it != end) {
+      state.back() = it;
+      return *this;
+    }
+
+    for (int k = N - 2; k >= 0; k--) {
+      it = state[k];
+      ++it;
+      if (it == state[k + 1]) {
+        continue;
+      }
+
+      state[k] = it;
+      it++;
+      for (int j = k + 1; j < N; j++) {
+        if (it == end) {
+          is_end = true;
+          return *this;
+        }
+        state[j] = it;
+        it++;
+      }
+      return *this;
+    }
+    is_end = true;
+    return *this;
+  }
+
+  PairIterator operator++(int) {
+    PairIterator tmp(*this);
+    operator++();
+    return tmp;
+  }
+
+  bool operator==(const PairIterator& other) const {
+    if (other.is_end != is_end) return false;
+    if (other.is_end && is_end) return true;
+
+    if (other.begin != begin) return false;
+    if (other.end != end) return false;
+
+    for (int k = 0; k < N; k++) {
+      if (state[k] != other.state[k]) return false;
+    }
+    return true;
+  }
+
+  bool operator!=(const PairIterator& other) const {
+    return !((*this) == other);
+  }
+
+  std::vector<Iterator> operator*() const { return state; }
+
+ private:
+  Iterator begin;
+  Iterator end;
+  bool is_end;
+  std::vector<Iterator> state;
+};
+
+template <typename Iterator, int N>
+class PairIterable {
+ public:
+  PairIterable(const Iterator& begin, const Iterator& end)
+      : begin_it(begin), end_it(end) {}
+  PairIterator<Iterator, N> begin() {
+    return PairIterator<Iterator, N>::Begin(begin_it, end_it);
+  }
+  PairIterator<Iterator, N> end() {
+    return PairIterator<Iterator, N>::End(begin_it, end_it);
+  }
+
+ private:
+  Iterator begin_it;
+  Iterator end_it;
+};
+
 }  // namespace box
