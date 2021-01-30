@@ -6,7 +6,7 @@ include(CTest)
 
 set(CMAKE_CXX_FLAGS
     "-Wall -Werror -pedantic -std=c++2a -ggdb -O2 ${CMAKE_CXX_FLAGS}")
-set(CMAKE_CXX_FLAGS_DEBUG "-fsanitize=address")
+set(CMAKE_CXX_FLAGS_DEBUG "-fsanitize=address -O0")
 
 file(GLOB sources "${CMAKE_SOURCE_DIR}/src/*.cpp")
 list(FILTER sources EXCLUDE REGEX "main.cpp")

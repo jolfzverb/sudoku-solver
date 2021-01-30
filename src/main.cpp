@@ -15,6 +15,8 @@ enum class Command {
   kIter,
   kReduce,
   kReducePairs,
+  kFindSwordfishInRows,
+  kFindSwordfishInColumns,
   kExit,
   kUnknown,
 };
@@ -52,6 +54,12 @@ Command GetNextCommand() {
   }
   if (command == "pmreduce") {
     return Command::kReduce;
+  }
+  if (command == "pmsfr") {
+    return Command::kFindSwordfishInRows;
+  }
+  if (command == "pmsfc") {
+    return Command::kFindSwordfishInColumns;
   }
   if (command == "pmreducepairs") {
     return Command::kReducePairs;
@@ -95,10 +103,19 @@ int main() {
       case Command::kReducePairs:
         solver::ReducePairs(state);
         break;
+      case Command::kFindSwordfishInRows:
+        solver::FindSwordfish(state);
+        break;
+      case Command::kFindSwordfishInColumns:
+        solver::FindSwordfish(state);
+        break;
       case Command::kIter:
         solver::ReducePencilMarks(state);
         if (state.changed_on_iter != state.current_iter) {
           solver::ReducePairs(state);
+        }
+        if (state.changed_on_iter != state.current_iter) {
+          solver::FindSwordfish(state);
         }
         if (state.changed_on_iter != state.current_iter) {
           std::cout << std::endl;

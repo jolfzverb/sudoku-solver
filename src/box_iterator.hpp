@@ -313,6 +313,7 @@ class PairIterator {
     for (int i = 0; i < N; i++) {
       if (it != end) {
         state.push_back(it);
+        state_indexes.push_back(i);
       } else {
         is_end = true;
         return;
@@ -325,7 +326,8 @@ class PairIterator {
       : begin(other.begin),
         end(other.end),
         is_end(other.is_end),
-        state(other.state) {}
+        state(other.state),
+        state_indexes(other.state_indexes) {}
 
   PairIterator& operator++() {
     if (is_end) {
@@ -336,25 +338,32 @@ class PairIterator {
     ++it;
     if (it != end) {
       state.back() = it;
+      state_indexes.back()++;
       return *this;
     }
 
     for (int k = N - 2; k >= 0; k--) {
       it = state[k];
+      int index = state_indexes[k];
       ++it;
+      ++index;
       if (it == state[k + 1]) {
         continue;
       }
 
       state[k] = it;
+      state_indexes[k] = index;
       it++;
+      index++;
       for (int j = k + 1; j < N; j++) {
         if (it == end) {
           is_end = true;
           return *this;
         }
         state[j] = it;
+        state_indexes[j] = index;
         it++;
+        index++;
       }
       return *this;
     }
@@ -386,12 +395,14 @@ class PairIterator {
   }
 
   std::vector<Iterator> operator*() const { return state; }
+  std::vector<size_t> GetIndexes() const {return state_indexes;}
 
  private:
   Iterator begin;
   Iterator end;
   bool is_end;
   std::vector<Iterator> state;
+  std::vector<size_t> state_indexes;
 };
 
 template <typename Iterator, int N>

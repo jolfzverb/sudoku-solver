@@ -1,6 +1,9 @@
 #include "solver.hpp"
 
+#include <map>
+
 #include "box_iterator.hpp"
+#include <iostream>
 
 namespace solver {
 
@@ -412,8 +415,201 @@ void ClearPencilMarks(state::State& state) {
   for (const auto& pair_list : box::GetIterable<1>(state, b)) {
     const auto& p = pair_list.front();
     if (p.val) {
-      p.pm.clear();
+      if (p.pm.size()) {
+        p.pm.clear();
+      }
     }
+  }
+}
+
+std::vector<std::map<int, std::set<int>>> SeparateRowsForSwordfish(
+    state::State& state, const std::vector<box::Box>& g) {
+
+  std::vector<std::map<int, std::set<int>>> result;
+  for (const auto& r : g) {
+    std::map<int, std::set<int>> marks_distribution;
+    int i = 0;
+    for (const auto& it : box::GetIterable<1>(state, r)) {
+      const auto& ref = it.front();
+      if (ref.val) {
+        i++;
+        continue;
+      }
+      for (int val : ref.pm) {
+        marks_distribution[val].insert(i);
+      }
+      i++;
+    }
+    result.emplace_back(marks_distribution);
+  }
+  return result;
+}
+
+struct DetectedXwing {
+  int val;
+  std::set<int> positions;
+};
+
+std::vector<DetectedXwing> DetectXwing(state::State& state, const std::vector<std::vector<std::map<int, std::set<int>>>::const_iterator>& rows){
+  std::set<int> values;
+  for (const auto& r : rows){
+    for (const auto& p : (*r)){
+      values.insert(p.first);
+    }
+  }
+
+  std::vector<DetectedXwing> result;
+
+  for (int val: values){
+    bool xwing_possible = true;
+    std::set<int> positions;
+    for (const auto& r : rows){
+      if(r->count(val)){
+        const auto& ps = r->at(val);
+        positions.insert(ps.begin(), ps.end());
+      } else {
+        xwing_possible = false;
+        break;
+      }
+    }
+    if(!xwing_possible) continue;
+
+    if(positions.size() <= rows.size()){
+      DetectedXwing x;
+      x.val = val;
+      x.positions = positions;
+      result.push_back(x);
+    }
+  }
+  return result;
+}
+struct XwingWithRows{
+  int val;
+  std::set<int> positions_in_row;
+  std::set<int> rows;
+};
+
+std::vector<XwingWithRows> GetSwordfish(state::State& state, const std::vector<box::Box>& g) {
+  const auto& s = SeparateRowsForSwordfish(state, g);
+  using Iterator = decltype(s.begin());
+  std::vector<XwingWithRows> r;
+  {
+  auto iterable = box::PairIterable<Iterator, 2>(s.begin(), s.end());
+  for (auto it = iterable.begin(); it!= iterable.end(); ++it){
+    const auto& xwings = DetectXwing(state, *it);
+    if(xwings.empty()){
+      continue;
+    }
+    std::set<int> rows;
+    const auto& indexes = it.GetIndexes();
+    rows.insert(indexes.begin(), indexes.end());
+    for (const auto& x: xwings){
+      XwingWithRows xr;
+      xr.val = x.val;
+      xr.positions_in_row = x.positions;
+      xr.rows = rows;
+      r.push_back(xr);
+    }
+  }
+  }
+
+{
+  auto iterable = box::PairIterable<Iterator, 3>(s.begin(), s.end());
+  std::vector<XwingWithRows> r;
+  for (auto it = iterable.begin(); it!= iterable.end(); ++it){
+    const auto& xwings = DetectXwing(state, *it);
+    if(xwings.empty()){
+      continue;
+    }
+    std::set<int> rows;
+    const auto& indexes = it.GetIndexes();
+    rows.insert(indexes.begin(), indexes.end());
+    for (const auto& x: xwings){
+      XwingWithRows xr;
+      xr.val = x.val;
+      xr.positions_in_row = x.positions;
+      xr.rows = rows;
+      r.push_back(xr);
+    }
+  }
+  }
+{
+  auto iterable = box::PairIterable<Iterator, 4>(s.begin(), s.end());
+  std::vector<XwingWithRows> r;
+  for (auto it = iterable.begin(); it!= iterable.end(); ++it){
+    const auto& xwings = DetectXwing(state, *it);
+    if(xwings.empty()){
+      continue;
+    }
+    std::set<int> rows;
+    const auto& indexes = it.GetIndexes();
+    rows.insert(indexes.begin(), indexes.end());
+    for (const auto& x: xwings){
+      XwingWithRows xr;
+      xr.val = x.val;
+      xr.positions_in_row = x.positions;
+      xr.rows = rows;
+      r.push_back(xr);
+    }
+  }
+  }
+  return r;
+}
+
+void ApplyXwingRestrictionToColumns(state::State& state, const box::Box& b, int val, std::set<int> ignored_rows){
+  for (auto it : box::GetIterable<1>(state, b)) {
+    auto& ref = it.front();
+    if(ignored_rows.count(ref.i)){
+      continue;
+    }
+    if(ref.pm.count(val)){
+      ref.pm.erase(val);
+      state.changed_on_iter = state.current_iter;
+    }
+  }
+  
+}
+
+void ApplyXwingRestrictionToRows(state::State& state, const box::Box& b, int val, std::set<int> ignored_cols){
+  for (auto it : box::GetIterable<1>(state, b)) {
+    auto& ref = it.front();
+    if(ignored_cols.count(ref.j)){
+      continue;
+    }
+    if(ref.pm.count(val)){
+      ref.pm.erase(val);
+      state.changed_on_iter = state.current_iter;
+    }
+  }
+  
+}
+
+void FindSwordfish(state::State& state){
+{
+  const auto& g = box::Box::GetGridAsRows();
+  const auto& xwings = GetSwordfish(state, g);
+  for (const auto& x : xwings){
+    int val = x.val;
+    std::set<int> column_indexes = x.positions_in_row;
+    std::set<int> rows_to_ignore = x.rows;
+    std::vector<box::Box> cols = box::Box::GetGridAsColumns();
+    for (int i : column_indexes){
+      ApplyXwingRestrictionToColumns(state, cols[i], val, rows_to_ignore);
+    }
+  }
+  }
+{
+  const auto& g = box::Box::GetGridAsColumns();
+  const auto& xwings = GetSwordfish(state, g);
+  for (const auto& x : xwings){
+    int val = x.val;
+    std::set<int> column_indexes = x.positions_in_row;
+    std::set<int> rows_to_ignore = x.rows;
+    std::vector<box::Box> cols = box::Box::GetGridAsRows();
+    for (int i : column_indexes){
+      ApplyXwingRestrictionToRows(state, cols[i], val, rows_to_ignore);
+    }
+  }
   }
 }
 
